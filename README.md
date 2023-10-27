@@ -9,6 +9,8 @@ class.
 Methodology
 -----------
 
+### NNA
+
 Neighbor Selection:
 
 * `nearest` selects a number (k) of nearest neighbors using euclidian distance.
@@ -19,6 +21,11 @@ Weighting:
 
 * Both `nearest` and `voronoi` use distance power-based weight (`d**power`)
 * `laplace` uses the ratio of the voronoi-neighbor edge length do distance between neighbors.
+
+### GMOS
+
+An additional option has been implemented to use iterative radius searches and
+subsequent smoothing. This method is based on work done at NOAA/NWS by Glahn (2009)
 
 
 Examples
@@ -72,13 +79,52 @@ Neighbor Averaging or eVNA. eVNA is used to adjust models to better reflect
 observations. For reference, `nn = NNA(method='voronoi', k=30, power=-2)` is
 equivalent to the standard options for EPA's `eVNA` method.[1,2] In eVNA, the
 obs:model ratio at monitor sites is interpolated to grid cell centers and then
-multiplied by the model. The value of `k=3-` generally agrees well softwares
+multiplied by the model. The value of `k=30` generally agrees well softwares
 like SMAT-CE and DFT that use an 8 degree radius with a minimum of 20 neighbors.
 
 NNA can also produce a variant of eVNA that I refer to as additive eVNA or
 aVNA for short. Instead of interpolating the obs:model ratio, it interpolates
 the bias. Then, the bias is subtracted from the model to adjust the model
 to better reflect the observations.
+
+NNA, eIDW, and aIDW
+-------------------
+
+The eVNA and aVNA approaches described below can be implemented with nearest
+instead of vornoi neighbors in about 2% of the time. Although it is fast, IDW
+is subject to artifacts due to the spatially biased observation network that
+eVNA was designed to address. For some applications, that might be fine.
+
+GMOS, eGMOS, and aGMOS
+----------------------
+
+GMOS is an implementation of the gridding of model output statistics (GMOS).
+GMOS was coined by Glahn et al. (2009) and a clear implementation is available
+in Glahn, Im and Wagner (2012). This technique is used by Djalalova (2015) and
+subsequently by NOAA for various "adjustments" to their forecasts. Below is my
+broad-brush understanding:
+
+    i \in AirNow stations
+    y_i = NAQFC_i
+    o_{a,i}, y_{a,i} = Analog(y_i, t_i, ws_i, wd_i, sr_i)
+    k_i = KalmanFilter(o_{a,i})
+    c_i = y_i - mean(y_{a,i}) 
+    b_i = y_i - (k_i + c_i)
+    y'_x = y_x - GMOS(b_i)
+
+If we are interested in applying a known bias, unlike Djalalova (2015), then
+b_i does not need to be predicted. In that case, bias ($b_i$) can be estimated
+from the difference between the model ($NAQFC_i$) and the observed value at the
+station ($o_i$). Then, GMOS can be used in place of VNA for an aVNA-like
+product. Or, the ratio could be used to create an eVNA-like product. The GMOS
+method is about 25% faster than the VNA equivalent. The results are more
+similar to voronoi than IDW. This likely due to the concentric circles reducing
+in successive iterations. Thus, reducing the influence of non-voronoi
+neighbors.
+
+Note: The GMOS implemented here does not have elevation or land/ocean
+awareness. Nor does it implement iterative QC as described by Glahn (2009).
+
 
 References
 ==========
@@ -88,3 +134,14 @@ application XX. (Eds. Steyn, D. G., & Rao, S. T.) Dordrecht: Springer Verlag.
 May 2009.
 
 [2] Abt, MATS User Guide 2007 or 2010
+
+[3] Glahn, Gilbert, Cosgrove, Ruth, and Sheets: The Gridding of MOS, Weather
+and Forecasting, 24, 520-529, https://doi.org/10.1175/2008WAF2007080.1, 2009.
+
+[4] Glahn, B., Im, J. S., and Wagner, G.: 8.4 Objective Analysis of MOS
+Forecasts and Observations in Sparse Data Regions, 2012.
+
+[5] Djalalova, I., Delle Monache, L., and Wilczak, J.: PM2.5 analog forecast
+and Kalman filter post-processing for the Community Multiscale Air Quality (CMAQ) model,
+Atmospheric Environment, 108, 76-87, https://doi.org/10.1016/j.atmosenv.2015.02.021, 2015.
+

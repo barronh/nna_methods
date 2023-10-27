@@ -78,6 +78,18 @@ def test_nn_loo(f=None):
     return df
 
 
+def test_gmos(f=None):
+    from .. import GMOS
+    import numpy as np
+
+    df = gettest(f=f)
+    fitdf = df.query('forfit == True').copy()
+    gn = GMOS(rs=np.asarray([1, .5, .25, .125, .062, .031, 0.02]))
+    gn.fit(fitdf[['X', 'Y']], fitdf['Z'])
+    df['Zhat_gn'] = gn.predict(df[['X', 'Y']])
+    return df
+
+
 def test_cross_validate(f=None):
     """
     Basic test of the cross_validate method with voronoi and nearest
