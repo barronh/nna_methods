@@ -29,7 +29,7 @@ def get_vna_ridge_lengths(xy):
 class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
     def __init__(
         self, k=10, power=-2, method='nearest', maxweight=_def_maxweight,
-        maxdist=_def_maxdist, loo=False, verbose=0
+        maxdist=_def_maxdist, loo=False, verbose=0, **kwds
     ):
         """
         Nearest Neighbor Averaging (NNA) object is designed to support 2D
@@ -121,6 +121,7 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
         self.maxweight = maxweight
         self.maxdist = maxdist
         self.loo = loo
+        self._kwds = {k: v for k, v in kwds.items()}
         self.verbose = verbose
 
     def fit(self, X, y=None):
@@ -138,12 +139,22 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
         """
         from sklearn.neighbors import NearestNeighbors
 
-        self._nn = NearestNeighbors()
+        self._nn = NearestNeighbors(**self._kwds)
         _X = np.asarray(X)
         self._nn.fit(_X)
-        assert np.allclose(np.asarray(self._nn._tree.data), _X)
+        chkX = self.get_fit_x()
+        assert np.allclose(chkX, _X)
         self._y = np.asarray(y)
         assert self._y.shape[0] == _X.shape[0]
+
+    def get_fit_x(self):
+        if hasattr(self._nn, '_fit_X'):
+            _X = self._nn._fit_X
+        elif self._nn._tree is not None:
+            _X = self._nn._tree.data
+        else:
+            raise ValueError('NNA must be fit before calling get_fit_x')
+        return np.asarray(_X)
 
     def nn(self, X, k=10, sort=True):
         """
@@ -262,7 +273,12 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
             idx = idx[:, 1:]
 
         isvn = self.findvn(X, idx)
-        dist = np.ma.masked_where(~isvn, dist)
+        # When the dist == 0, the point can be randomly left out
+        # this typically only affects predicting points in the training
+        # dataset, but the check is added here for correctness of the
+        # degenerate case.
+        isself = dist == 0
+        dist = np.ma.masked_where(~(isvn | isself), dist)
         if power is None:
             wgt = dist
         else:
@@ -319,7 +335,7 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
 
         X = np.asarray(X)
         isvn = self.findvn(X, idx)
-        _X = np.asarray(self._nn._tree.data)
+        _X = self.get_fit_x()
         rls = np.zeros_like(dist)
         n = idx.shape[0]
         if self.verbose < 1:
@@ -594,9 +610,19 @@ class GMOS(NNA):
         self._nn = NearestNeighbors()
         _X = np.asarray(X)
         self._nn.fit(_X)
-        assert np.allclose(np.asarray(self._nn._tree.data), _X)
+        chkX = self.get_fit_x()
+        assert np.allclose(chkX, _X)
         self._y = np.asarray(y)
         assert self._y.shape[0] == _X.shape[0]
+
+    def get_fit_x(self):
+        if hasattr(self._nn, '_fit_X'):
+            _X = self._nn._fit_X
+        elif self._nn._tree is not None:
+            _X = self._nn._tree.data
+        else:
+            raise ValueError('GMOS must be fit before calling get_fit_x')
+        return np.asarray(_X)
 
     def predict(
         self, X, A=None, smooth=True, both=False, loo=False, verbose=0
