@@ -90,10 +90,23 @@ to better reflect the observations.
 NNA, eIDW, and aIDW
 -------------------
 
-The eVNA and aVNA approaches described below can be implemented with nearest
-instead of vornoi neighbors in about 2% of the time. Although it is fast, IDW
-is subject to artifacts due to the spatially biased observation network that
-eVNA was designed to address. For some applications, that might be fine.
+The eVNA and aVNA approaches described above can be implemented with nearest
+instead of vornoi neighbors in about 2% of the walltime. Although it is fast,
+IDW is subject to artifacts due to the spatially biased observation network
+that eVNA was designed to address. In particular, the cluster observations
+around an urban area can overwhelm observations that are closer, but isolated.
+This can be overcome increasing the magnitude of the power (e.g., -2 to -5).
+For some applications, that might be fine.
+
+DelaunayInterp, eDNA, and aDNA
+------------------------------
+
+The eVNA and aVNA approaches described above can be implemented with Delaunay
+triangulation in about 0.25% of the walltime. This is very fast, but uses only
+the three points of the simplex that each prediction coordinate is within. This
+has the benefit of now allowing an isolated point to be overwhelmed by a
+cluster, but has ridges associated with the boundaries of interpolation within
+tesselation (triangle) borders.
 
 GMOS, eGMOS, and aGMOS
 ----------------------

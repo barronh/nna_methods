@@ -90,6 +90,17 @@ def test_gmos(f=None):
     return df
 
 
+def test_dna(f=None):
+    from .. import DelaunayInterp
+
+    df = gettest(f=f)
+    fitdf = df.query('forfit == True').copy()
+    dn = DelaunayInterp()
+    dn.fit(fitdf[['X', 'Y']], fitdf['Z'])
+    df['Zhat_gn'] = dn.predict(df[['X', 'Y']])
+    return df
+
+
 def test_cross_validate(f=None):
     """
     Basic test of the cross_validate method with voronoi and nearest
