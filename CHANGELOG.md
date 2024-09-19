@@ -1,0 +1,1 @@
+v0.6.0: added joblib based parallelization for NNA.predict

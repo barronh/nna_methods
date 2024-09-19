@@ -1,4 +1,4 @@
-__version__ = '0.5.0'
+__version__ = '0.6.0'
 __all__ = ['NNA', 'GMOS', 'DelaunayInterp', '__version__']
 
 
@@ -407,7 +407,7 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
 
     def predict(
         self, X, k=None, power=None, maxweight=None, maxdist=None, method=None,
-        loo=None
+        loo=None, njobs=None
     ):
         """
         Keyword arguments can be used to supersede keywords used to initialize
@@ -437,7 +437,10 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
                           centroids.
         loo : bool
             If True, leave out the nearest neighbor. Good for validation.
-
+        njobs : int or None
+            If None, process as serial operation.
+            If int, use joblib.Parallel and joblib.delayed to run njobs
+            parallel processes and concatenate results
 
         Returns
         -------
@@ -445,6 +448,24 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
             array of predictions (yhat). If y was 1-d, then array has shape
             n = (n=X.shape[0]). If y was 2-d, then array has the n x m.
         """
+        if njobs is not None:
+            from joblib import Parallel, delayed
+            n = X.shape[0]
+            ns = [n // njobs] * njobs
+            ns[-1] += (n - sum(ns))
+            print('Cells per job', ns)
+            se = np.cumsum([0] + ns)
+            with Parallel(n_jobs=njobs, verbose=10) as par:
+                processed_list = par(
+                    delayed(self.predict)(
+                        X[s:e], k=k, power=power, maxweight=maxweight,
+                        maxdist=maxdist, method=method, loo=loo, njobs=None
+                    )
+                    for s, e in zip(se[:-1], se[1:])
+                )
+            yout = np.ma.concatenate(processed_list, axis=0)
+            return yout
+
         # Use defaults from initialization
         if k is None:
             k = self.k
@@ -652,7 +673,7 @@ class GMOS(NNA):
 
         Returns
         -------
-        A, SA, or A, SA : array-like
+        A, SA, or A or SA : array-like
         """
         # a priori guess
         if A is None:
@@ -660,23 +681,34 @@ class GMOS(NNA):
         else:
             A = np.asarray(A)
 
+        # find all neighbors once
+        r = self._rs[0]
+        dists, idxs = self._nn.radius_neighbors(X, radius=r)
+        ys = np.array([
+            self._y[idx]
+            for idx in idxs
+        ], dtype=object)
+        r2 = r**2
+        d2 = dists**2
+        allws = (r2 - d2) / (r2 + d2)
+        if loo:
+            # set weights to 0 distance equal to 0 (leave-one-out)
+            allws = np.array([
+                w * (dists[wi] != 0).astype('i') for wi, w in enumerate(allws)
+            ], dtype=object)
+
         # Iterative bias correction
         for r in self._rs:
             if verbose > 0:
                 print(r, flush=True)
-            dists, idxs = self._nn.radius_neighbors(X, radius=r)
-            ys = np.array([
-                self._y[idx]
-                for idx in idxs
-            ], dtype=object)
-            if loo:
-                # a weight from d  = inf is 0
-                dists = np.array([
-                    np.ma.masked_values(d, 0).filled(np.inf) for d in dists
-                ], dtype=object)
-            r2 = r**2
-            d2 = dists**2
-            ws = (r2 - d2) / (r2 + d2)
+            if r == self._rs[0]:
+                ws = allws
+            else:
+                # zero-out weights from further distances.
+                ws = np.array([
+                    allws[di] * (dist < r).astype('i')
+                    for di, dist in enumerate(dists)
+                ], dtype='object')
             num = np.array([wv.sum() for wv in (ws * (ys - A))])
             den = np.ma.masked_values([w.sum() for w in ws], 0)
             C = num / den
