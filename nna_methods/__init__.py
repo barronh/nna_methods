@@ -579,14 +579,15 @@ class GMOS(NNA):
         Added in version 0.4.0
 
         Method from Glahn (2012) section 2 and section 11
-        https://ams.confex.com/ams/92Annual/webprogram/Manuscript/Paper198533/AMS2012_preprint.pdf
+        https://ams.confex.com/ams/92Annual/webprogram/Manuscript/Paper198533/
+            AMS2012_preprint.pdf
 
-        Basic gridding approach algorith:
+        Basic gridding approach algorithm:
 
             A = first guess
             for r in rs:
                 # i where d_i < r
-                w_i = (r**2 - d_i**2) / (r**2 + d_i**2)
+                w_i = s_i * (r**2 - d_i**2) / (r**2 + d_i**2)
                 w_i = w_i / sum(w_i)
                 C = sum(w_i * (O_i - A))
                 A += C
@@ -594,11 +595,15 @@ class GMOS(NNA):
         Default radii:
             From  Djalalova (2015, 10.1016/j.atmosenv.2015.02.021)
 
+        s_i is an addition to Glahn that allows for weighting of individual
+            observations. This allows combining, for example, regulatory grade
+            observations with low-cost sensors
+
         Basic smoothing approach algorith:
 
             r_x = min(d_i) for each x
             for x in X:
-                # for all grid points where teh distance from x (d_g) is less
+                # for all grid points where the distance from x (d_g) is less
                 # than (r_x): d_g < r_x
                 SA = (A_g / r_g) / sum(1/r_g)
 
@@ -613,7 +618,7 @@ class GMOS(NNA):
             rs = rs / to_meter
         self._rs = rs
 
-    def fit(self, X, y=None):
+    def fit(self, X, y=None, s=None):
         """
         Arguments
         ---------
@@ -621,6 +626,9 @@ class GMOS(NNA):
             n by 2 array of coordinates that should be provided in grid units
         y : array-like
             n or n x m array of results
+        s : array-like
+            Scaling parameter for weights. This allows individual observations
+            to be weighted based on uncertainty or some arbitrary value.
 
         Returns
         -------
@@ -634,6 +642,9 @@ class GMOS(NNA):
         chkX = self.get_fit_x()
         assert np.allclose(chkX, _X)
         self._y = np.asarray(y)
+        if s is None:
+            s = np.ones_like(self._y)
+        self._s = np.asarray(s)
         assert self._y.shape[0] == _X.shape[0]
 
     def get_fit_x(self):
@@ -688,6 +699,14 @@ class GMOS(NNA):
             self._y[idx]
             for idx in idxs
         ], dtype=object)
+        _ones = np.array([
+            np.ones_like(len(idx), dtype=self._y.dtype)
+            for idx in idxs
+        ], dtype=object)
+        ss = np.array([
+            self._s[idx]
+            for idx in idxs
+        ], dtype=object)
         r2 = r**2
         d2 = dists**2
         allws = (r2 - d2) / (r2 + d2)
@@ -709,8 +728,8 @@ class GMOS(NNA):
                     allws[di] * (dist < r).astype('i')
                     for di, dist in enumerate(dists)
                 ], dtype='object')
-            num = np.array([wv.sum() for wv in (ws * (ys - A))])
-            den = np.ma.masked_values([w.sum() for w in ws], 0)
+            num = np.array([wv.sum() for wv in (ss * ws * (ys - A))])
+            den = np.ma.masked_values([w.sum() for w in ws * ss], 0)
             C = num / den
             A += C.filled(0)
 
@@ -730,7 +749,7 @@ class GMOS(NNA):
 
         ys = np.array([snn._y[idx] for idx in sidxs], dtype=object)
         snum = np.array([wys.sum() for wys in (ys * sws)])
-        sden = np.ma.masked_values([w.sum() for w in (sws * ys / ys)], 0)
+        sden = np.ma.masked_values([w.sum() for w in (sws * _ones)], 0)
         sval = snum / sden
         SA = sval
         # Special consideration of the 4 cells around the station
