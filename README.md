@@ -32,9 +32,9 @@ Examples
 --------
 
 The example below uses default interpolation methods on California Housing
-prices interpolations based solely on longitude, latitude. Not a great test, 
-because we know that the model will not fit well, but it demonstrates the
-ease of use.
+prices interpolations based solely on interpolating sparse data. We do not
+expect the model to fit well and the correlation is around 0.6. The intent
+is not to make a great model of housing, but to show the ease of use.
 
 ```
 import pandas as pd
@@ -54,15 +54,17 @@ for trainidx, testidx in kf.split(X, y):
   df.loc[testidx, 'yhat'] = nn.predict(X[testidx, -2:])
 
 statdf = df.describe()
-statdf.loc['corr'] = df.corr()['y']
+statdf.loc['r'] = df.corr()['y']
 statdf.loc['mb'] = df.subtract(df['y'], axis=0).mean()
 statdf.loc['rmse'] = (df.subtract(df['y'], axis=0)**2).mean()**0.5
-statdf.loc[['mean', 'std', 'rmse']].round(2)
+print(statdf.loc[['mean', 'std', 'rmse', 'r']].round(2).to_markdown())
 # Output:
-#        lat     lon    y yhat
-# mean 35.63 -119.57 2.07 2.09
-# std   2.14    2.00 1.15 1.00
-# rmse 33.66  121.66 0.00 0.98
+# |      |   lat |     lon |    y |   yhat |
+# |:-----|------:|--------:|-----:|-------:|
+# | mean | 35.63 | -119.57 | 2.07 |   2.09 |
+# | std  |  2.14 |    2    | 1.15 |   1    |
+# | rmse | 33.66 |  121.66 | 0    |   0.98 |
+# | r    | -0.14 |   -0.05 | 1    |   0.59 |
 ```
 
 By default, this exmample uses NNA options `method='nearest'`, `k=10`, and
