@@ -1,10 +1,18 @@
 """
-Observationally Corrected Model Ozone
+Interpolated California Housing Price
 =====================================
 
 The example below uses default interpolation methods on California Housing
 prices interpolations based solely on interpolating sparse data. We do not
-expect the model to fit well and the correlation is around 0.6."""
+expect the model to fit well and the correlation is around 0.6.
+
+This example requires several libraries that can be installed with the command:
+
+.. code::
+
+    python -m pip install git+https://github.com/barronh/nna_methods.git
+
+"""
 
 # %%
 # Import Libraries

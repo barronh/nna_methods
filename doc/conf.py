@@ -51,17 +51,20 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 class MyOrder:
     def __init__(self, src_dir):
         self.src_dir = src_dir
-        self.order = {
-            'plot_correctedozone.py': 0,
-        }
+        self.order = [
+            'plot_californiahousing.py',
+            'plot_correctedozone.py',
+            'plot_equatesevna.py',
+        ]
  
     def __repr__(self):
         return f"<{self.__class__.__name__}>"
 
     def __call__(self, filename):
-        self.order.setdefault(filename, len(self.order))
-        result = (self.order[filename], filename)
-        return result
+        if not filename in self.order:
+            self.order.append(filename)
+
+        return (self.order.index(filename), filename)
 
 sphinx_gallery_conf = {
      'examples_dirs': '../examples',   # path to your example scripts

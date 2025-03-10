@@ -29,10 +29,15 @@ So, we need a model and observations. For this example:
 - :math:`x` and :math:`y`: for this example, we'll use lon/lat to calculate
   distances.
 
+This example requires several prerequisite libraries. Install them with the command:
+
+.. code::
+
+    python -m pip install cftime netcdf4 pyrsig pycno git+https://github.com/barronh/nna_methods.git
+
+
 .. [#f1] Timin, B., Wesson, K., & Thurman, J. (2010). Application of Model and Ambient Data Fusion Techniques to Predict Current and Future Year PM2.5 Concentrations in Unmonitored Areas, Chapter 2.12. In D. G. Steyn & S. T. Rao (Eds.), Air pollution modeling and its application XX. Springer Verlag. dx.doi.org/10.1007/978-90-481-3812-8"""
 
-# Install library requirements if needed.
-#%pip install cftime netcdf4 pyrsig git+https://github.com/barronh/nna_methods.git
 import pandas as pd
 import numpy as np
 import cftime
