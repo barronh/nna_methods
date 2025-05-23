@@ -9,7 +9,8 @@ class NNABlender(NNA):
         """
         for nn in nnas:
             if getattr(nn, '_y', None) is None:
-                raise ValueError('All nnas must be fit before provided to NNABlender')
+                msg = 'All nnas must be fit before provided to NNABlender'
+                raise ValueError(msg)
         self._nnas = nnas
         self._weights = weights
 
@@ -93,8 +94,10 @@ class NNABlender(NNA):
                 msg = f'method {method} unknown; use mearest or voronoi'
                 raise KeyError(msg)
 
-            dist, idx = wgtf(X, power=None)
+            dist, idx = wgtf(X, power=None, loo=nnloo)
+            dist = np.ma.masked_greater(dist, nnmaxdist)
             wgt = self._weights[ni] * dist**nnpower
+            wgt[:] = np.minimum(nnmaxweight, wgt)
             wgts.append(wgt)
             ys.append(nn._y[idx])
 
