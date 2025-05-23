@@ -94,9 +94,13 @@ class NNABlender(NNA):
                 msg = f'method {method} unknown; use mearest or voronoi'
                 raise KeyError(msg)
 
-            dist, idx = wgtf(X, power=None, loo=nnloo)
-            dist = np.ma.masked_greater(dist, nnmaxdist)
-            wgt = np.ma.filled(self._weights[ni] * dist**nnpower, 0)
+            wgt, idx = wgtf(
+                X, power=nnpower, loo=nnloo, maxdist=nnmaxdist, normed=False
+            )
+            wgt = np.ma.filled(self._weights[ni] * wgt, 0)
+            # dist, idx = wgtf(X, power=None, loo=None)
+            # dist = np.ma.masked_greater(dist, nnmaxdist)
+            # wgt = np.ma.filled(self._weights[ni] * dist**nnpower, 0)
             wgt[:] = np.minimum(nnmaxweight, wgt)
             wgts.append(wgt)
             ys.append(nn._y[idx])

@@ -181,7 +181,7 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
 
     def idw_nn_wgts(
         self, X, k=10, power=-2, maxweight=_def_maxweight, maxdist=None,
-        loo=False
+        loo=False, normed=True
     ):
         """
         Calculate nearest neighbor weights
@@ -201,6 +201,9 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
             masked.
         loo : bool
             If True, leave out the nearest neighbor. Good for validation.
+        normed : bool
+            Usually, you want weights to be normalized to sum to one. If you
+            want prenormalized weights, set normed=False.
 
         Returns
         -------
@@ -225,12 +228,13 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
         else:
             mindist = maxweight**(1/power)
             wgt = np.minimum(maxweight, np.maximum(mindist, dist)**power)
-            wgt = wgt / wgt.sum(1)[:, None]
+            if normed:
+                wgt = wgt / wgt.sum(1)[:, None]
         return wgt, idx
 
     def idw_vn_wgts(
         self, X, k=30, power=-2, maxweight=_def_maxweight, maxdist=None,
-        loo=False
+        loo=False, normed=True
     ):
         """
         Calculate voronoi neighbor weights. Same as idw_nn_wgts, but masks
@@ -251,6 +255,9 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
             masked.
         loo : bool
             If True, leave out the nearest neighbor. Good for validation.
+        normed : bool
+            Usually, you want weights to be normalized to sum to one. If you
+            want prenormalized weights, set normed=False.
 
         Returns
         -------
@@ -284,13 +291,14 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
                 maxdist
             )**power
             wgt = np.minimum(maxweight, wgt)
-            wgt = wgt / wgt.sum(1)[:, None]
+            if normed:
+                wgt = wgt / wgt.sum(1)[:, None]
 
         return wgt, idx
 
     def laplace_vn_wgts(
         self, X, k=10, power=-2, maxweight=_def_maxweight, maxdist=None,
-        loo=False
+        loo=False, normed=True
     ):
         """
         Calculate nearest neighbor weights
@@ -312,6 +320,9 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
             masked.
         loo : bool
             If True, leave out the nearest neighbor. Good for validation.
+        normed : bool
+            Usually, you want weights to be normalized to sum to one. If you
+            want prenormalized weights, set normed=False.
 
         Returns
         -------
@@ -351,7 +362,8 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
         mindist = np.maximum(rls / maxweight, 1e-20)
         laplace_wgt = rls / np.maximum(mindist, dist)
         laplace_wgt = np.minimum(maxweight, laplace_wgt)
-        laplace_wgt = laplace_wgt / laplace_wgt.sum(1)[:, None]
+        if normed:
+            laplace_wgt = laplace_wgt / laplace_wgt.sum(1)[:, None]
         return laplace_wgt, idx
 
     def findvn(self, X, idxn):
