@@ -483,7 +483,7 @@ class NNA(BaseEstimator, MultiOutputMixin, RegressorMixin):
         elif method == 'nearest':
             wgtf = self.idw_nn_wgts
         else:
-            raise KeyError(f'method {method} unknown; use mearest or voronoi')
+            raise KeyError(f'method {method} unknown; use nearest or voronoi')
         wgt, idx = wgtf(
             X, k=k, power=power, maxweight=maxweight, maxdist=maxdist, loo=loo
         )

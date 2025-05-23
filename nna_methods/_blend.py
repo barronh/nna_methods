@@ -96,20 +96,20 @@ class NNABlender(NNA):
 
             dist, idx = wgtf(X, power=None, loo=nnloo)
             dist = np.ma.masked_greater(dist, nnmaxdist)
-            wgt = self._weights[ni] * dist**nnpower
+            wgt = np.ma.filled(self._weights[ni] * dist**nnpower, 0)
             wgt[:] = np.minimum(nnmaxweight, wgt)
             wgts.append(wgt)
             ys.append(nn._y[idx])
 
-        wgt = np.concatenate(wgts, axis=1)
-        wgt /= wgt.sum(1)[:, None]
-        ys = np.concatenate(ys, axis=1)
-        if nn._y.ndim == 1:
+        ys = np.ma.concatenate(ys, axis=1)
+        wgt = np.ma.concatenate(wgts, axis=1)
+        wgt = wgt / wgt.sum(1)[:, None]
+        if ys.ndim == wgt.ndim:
             yhat = (ys * wgt).sum(1)
             return yhat
         else:
             yhats = []
             for y in ys.T:
-                yhat = (y[idx] * wgt).sum(1)
+                yhat = (y.T * wgt).sum(1)
                 yhats.append(yhat)
             return np.array(yhats).T
