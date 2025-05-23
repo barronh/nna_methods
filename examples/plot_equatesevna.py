@@ -1,6 +1,6 @@
 """
-Observationally Corrected Model Ozone
-=====================================
+Observationally Corrected EQUATES Ozone
+=======================================
 
 Very similar example to plot_correctedozone.py, just for EQUATES instead of for
 GEOS-CF. For details about the method[#f1]_, please look at the

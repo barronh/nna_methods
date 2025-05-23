@@ -18,6 +18,7 @@ setup(
     version=versionstr,
     description='Nearest Neighbor Averaging methods',
     long_description=longdescstr,
+    long_description_content_type='text/markdown',
     author='Barron H. Henderson',
     author_email='barronh@gmail.com',
     packages=['nna_methods'],
